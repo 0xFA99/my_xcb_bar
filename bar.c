@@ -19,7 +19,8 @@ int main(void)
 
     uint32_t values[] = {
         screen->white_pixel,
-        XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS
+        XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS |
+        XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE
     };
 
     xcb_create_window(
@@ -48,6 +49,36 @@ int main(void)
         switch (type) {
             case XCB_EXPOSE: printf("Redraw\n"); break;
             case XCB_KEY_PRESS: printf("Key pressed\n"); break;
+
+            case XCB_BUTTON_PRESS:
+            case XCB_BUTTON_RELEASE:
+            {
+                xcb_button_press_event_t *key = (xcb_button_press_event_t *)event;
+                const char *action = (type == XCB_BUTTON_PRESS) ? "Pressed" : "Released";
+
+                switch (key->detail)
+                {
+                    case 1:
+                        printf("Left Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                    break;
+
+                    case 2:
+                        printf("Middle Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                    break;
+
+                    case 3:
+                        printf("Right Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                    break;
+
+                    case 4:
+                        printf("Scroll Up %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                    break;
+
+                    case 5:
+                        printf("Scroll Down %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                    break;
+                }
+            } break;
         }
 
         free(event);
