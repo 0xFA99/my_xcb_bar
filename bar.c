@@ -20,7 +20,8 @@ int main(void)
     uint32_t values[] = {
         screen->white_pixel,
         XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS |
-        XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE
+        XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW
     };
 
     xcb_create_window(
@@ -78,6 +79,15 @@ int main(void)
                         printf("Scroll Down %s at (%d, %d)\n", action, key->event_x, key->event_y);
                     break;
                 }
+            } break;
+
+            case XCB_ENTER_NOTIFY:
+            case XCB_LEAVE_NOTIFY:
+            {
+                xcb_enter_notify_event_t *enter = (xcb_enter_notify_event_t *)event;
+                const char *action = (type == XCB_ENTER_NOTIFY) ? "entered" : "leave";
+
+                printf("Mouse %s window at (%d, %d)\n", action, enter->event_x, enter->event_y);
             } break;
         }
 
