@@ -19,9 +19,10 @@ int main(void)
 
     uint32_t values[] = {
         screen->white_pixel,
-        XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_KEY_PRESS |
+        XCB_EVENT_MASK_EXPOSURE     | XCB_EVENT_MASK_POINTER_MOTION |
         XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
-        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW
+        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW   |
+        XCB_EVENT_MASK_KEY_PRESS    | XCB_EVENT_MASK_KEY_RELEASE
     };
 
     xcb_create_window(
@@ -49,34 +50,42 @@ int main(void)
 
         switch (type) {
             case XCB_EXPOSE: printf("Redraw\n"); break;
-            case XCB_KEY_PRESS: printf("Key pressed\n"); break;
+
+            case XCB_KEY_PRESS:
+            case XCB_KEY_RELEASE:
+            {
+                xcb_key_press_event_t *key = (xcb_key_press_event_t *)event;
+                const char *action = (type == XCB_KEY_PRESS) ? "Pressed" : "Release";
+
+                printf("Key %d %s\n", key->detail, action);
+            } break;
 
             case XCB_BUTTON_PRESS:
             case XCB_BUTTON_RELEASE:
             {
-                xcb_button_press_event_t *key = (xcb_button_press_event_t *)event;
+                xcb_button_press_event_t *btn = (xcb_button_press_event_t *)event;
                 const char *action = (type == XCB_BUTTON_PRESS) ? "Pressed" : "Released";
 
-                switch (key->detail)
+                switch (btn->detail)
                 {
                     case 1:
-                        printf("Left Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                        printf("Left Click %s at (%d, %d)\n", action, btn->event_x, btn->event_y);
                     break;
 
                     case 2:
-                        printf("Middle Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                        printf("Middle Click %s at (%d, %d)\n", action, btn->event_x, btn->event_y);
                     break;
 
                     case 3:
-                        printf("Right Click %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                        printf("Right Click %s at (%d, %d)\n", action, btn->event_x, btn->event_y);
                     break;
 
                     case 4:
-                        printf("Scroll Up %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                        printf("Scroll Up %s at (%d, %d)\n", action, btn->event_x, btn->event_y);
                     break;
 
                     case 5:
-                        printf("Scroll Down %s at (%d, %d)\n", action, key->event_x, key->event_y);
+                        printf("Scroll Down %s at (%d, %d)\n", action, btn->event_x, btn->event_y);
                     break;
                 }
             } break;
@@ -88,6 +97,13 @@ int main(void)
                 const char *action = (type == XCB_ENTER_NOTIFY) ? "entered" : "leave";
 
                 printf("Mouse %s window at (%d, %d)\n", action, enter->event_x, enter->event_y);
+            } break;
+
+            case XCB_MOTION_NOTIFY:
+            {
+                xcb_motion_notify_event_t *motion = (xcb_motion_notify_event_t *)event;
+
+                printf("Mouse moved at (%d, %d)\n", motion->event_x, motion->event_y);
             } break;
         }
 
