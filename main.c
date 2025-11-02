@@ -1,23 +1,21 @@
-#include <stdio.h>
 
 #define BAR_IMPLEMENTATION
 #include "bar.h"
 
-int main(void) {
-    struct Bar mybar;
+#include <unistd.h>
 
-    bar_init(&mybar);
-    bar_start(&mybar);
-    bar_set_wm_hints(&mybar, mybar.XWindow);
+int main(void)
+{
+    struct Bar bar = {0};
 
-    xcb_generic_event_t *event;
-    while (event = xcb_wait_for_event(mybar.XConnection))
-    {
-        free(event);
-    }
+    bar_init(&bar);
+    bar.width = 1920;
+    bar.height = 24;
 
-    bar_destroy(&mybar);
+    bar_create(&bar);
 
+    pause();
+
+    bar_destroy(&bar);
     return 0;
 }
-
