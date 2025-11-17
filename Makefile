@@ -3,7 +3,7 @@ OBJECTS = $(SOURCES:.asm=.o)
 
 BIN = mochiwm
 
-LDFLAGS = -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lxcb -lc -g
+LDFLAGS = -dynamic-linker /lib64/ld-linux-x86-64.so.2 -lxcb -lxcb-keysyms -lc -g
 
 all: $(BIN)
 

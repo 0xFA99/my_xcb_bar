@@ -1,5 +1,15 @@
 format  ELF64
 
+ACTIVE_COLOR        equ 0xf4f4f4
+INACTIVE_COLOR      equ 0x3a3a3a
+
+XCB_MOD_MASK_1      equ 8                       ; Alt
+
+XK_Tab              equ 0xff09
+XK_q                equ 0x0071
+
+XCB_GRAB_MODE_ASYNC equ 1
+
 extrn   xcb_connect
 extrn   xcb_disconnect
 extrn   xcb_connection_has_error
@@ -9,11 +19,98 @@ extrn   xcb_intern_atom
 extrn   xcb_intern_atom_reply
 extrn   xcb_change_window_attributes_checked
 extrn   xcb_request_check
+extrn   xcb_key_symbols_alloc
+extrn   xcb_key_symbols_get_keycode
+extrn   xcb_grab_key
+extrn   xcb_alloc_color
+extrn   xcb_alloc_color_reply
 
 extrn   free
 extrn   write
 
 section '.text' executable
+
+_get_color_pixel:
+    push        r12
+
+    mov         edx, edi
+    shl         edx, 16
+    and         edx, 0xFF
+    imul        edx, edx, 257
+
+    mov         ecx, edi
+    shl         ecx, 16
+    and         ecx, 0xFF
+    imul        ecx, ecx, 257
+
+    mov         r8d, edi
+    and         r8d, 0xFF
+    imul        r8d, r8d, 257
+
+    mov         rdi, [XConnection]
+    mov         esi, dword [XScreen + 4]
+    call        xcb_alloc_color
+
+    mov         rdi, [XConnection]
+    mov         esi, eax
+    xor         edx, edx
+    call        xcb_alloc_color_reply
+
+    test        rax, rax
+    jz          .error
+
+    mov         r12d, dword [rax + 16]      ; reply->pixel
+
+    mov         rdi, rax
+    call        free
+
+    mov         eax, r12d
+    jmp         .done
+
+.error:
+    mov         edi, 2
+    lea         rsi, [E3]
+    mov         edx, 36
+    call        write
+    
+    xor         eax, eax
+
+.done:
+    pop         r12
+    ret
+
+_grab_keys:
+    push        r12
+    push        r13
+    sub         rsp, 8 ; sudah align rsp % 16 = 0
+
+    ; xcb_key_symbols_t *keysyms = xcb_key_symbols_alloc(conn);
+    mov         rdi, [XConnection]
+    call        xcb_key_symbols_alloc
+    mov         r12, rax                    ; r12 = keysyms
+
+    ; keycode = xcb_key_symbols_get_keycode(keysyms, XK_Tab);
+    mov         rdi, r12                    ; keysyms
+    mov         esi, XK_Tab
+    call        xcb_key_symbols_get_keycode
+    mov         r13, rax                    ; keycode
+
+    mov         rdi, [XConnection]
+    mov         esi, 1
+    mov         edx, [XWindowRoot]
+    mov         ecx, XCB_MOD_MASK_1
+    mov         r8, [r13]
+    mov         r9d, XCB_GRAB_MODE_ASYNC
+    mov         dword [rsp], XCB_GRAB_MODE_ASYNC
+    call        xcb_grab_key
+
+    mov         rdi, r13
+    call        free
+
+    add         rsp, 8
+    pop         r13
+    pop         r12
+    ret
 
 _setup_atoms:
     sub         rsp, 8
@@ -98,6 +195,14 @@ _start:
     test        rax, rax
     jnz         .errorAnotherWMRunning
 
+    mov         edi, ACTIVE_COLOR
+    call        _get_color_pixel
+    mov         [active_color_pixel], eax
+
+    mov         edi, INACTIVE_COLOR
+    call        _get_color_pixel
+    mov         [inactive_color_pixel], eax
+
     mov         rdi, [XConnection]
     call        xcb_disconnect
     jmp         .done
@@ -119,6 +224,11 @@ _start:
     mov         eax, 60
     xor         edi, edi
     syscall
+
+
+section '.data' writeable
+active_color_pixel      dd 0
+inactive_color_pixel    dd 0
 
 
 section '.bss'
@@ -144,6 +254,7 @@ wm_delete_window        db "WM_DELETE_WINDOW"
 
 E1                      db "[ERROR]: Could not open display!", 0xa, 0x0
 E2                      db "[ERROR]: Another WM is already running!", 0xa, 0x0
+E3                      db "[ERROR]: Could not allocate color!", 0xa, 0x0
 
 
 section '.note.GNU-stack'
